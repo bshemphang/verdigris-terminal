@@ -1,8 +1,10 @@
 # VERDIGRIS TERMINAL
 
-![threejs-fps-02](https://make.fun/badge/threejs-fps-02.svg)
-![rank](https://make.fun/badge/threejs-fps-02/bshemphang/verdigris-terminal/rank.svg)
-![reward](https://make.fun/badge/threejs-fps-02/bshemphang/verdigris-terminal/reward.svg)
+[![make.fun · threejs-fps-02](https://make.fun/badge/threejs-fps-02.svg)](https://make.fun/bounty/threejs-fps-02?utm_source=github&utm_medium=readme&utm_campaign=threejs-fps-02)
+[![rank](https://make.fun/badge/threejs-fps-02/bshemphang/verdigris-terminal/rank.svg)](https://make.fun/bounty/threejs-fps-02/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=threejs-fps-02)
+[![reward](https://make.fun/badge/threejs-fps-02/bshemphang/verdigris-terminal/reward.svg)](https://make.fun/bounty/threejs-fps-02?utm_source=github&utm_medium=readme&utm_campaign=threejs-fps-02)
+
+Built for the [make.fun threejs-fps-02 bounty](https://make.fun/bounty/threejs-fps-02). Referral: https://make.fun/r/v6wvv0dh
 
 A 100% original three.js tactical FPS for the make.fun **threejs-fps-02** bounty.
 An ornate, sunlit Art-Deco Botanical Conservatory and Sunken Metro Concourse:
