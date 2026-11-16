@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VERDIGRIS TERMINAL — a three.js tactical FPS</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b1016'/%3E%3Ctext x='16' y='23' font-size='18' font-family='Georgia,serif' font-weight='bold' fill='%23d6ad60' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js"}}</script>
+<style>
+  /* VERDIGRIS TERMINAL: obsidian-glass panels, brass hairlines, tabular numerals.
+     Sunlit Art-Deco conservatory; crimson AURORA vs cobalt MERIDIAN. */
+  :root {
+    --panel: rgba(11, 16, 22, 0.78);
+    --hairline: rgba(214, 173, 96, 0.35);
+    --ink: #efe9dc; --muted: #9aa8a0; --accent: #d6ad60;
+    --danger: #c0392b; --aurora: #c0392b; --meridian: #4a90c2;
+    --font-ui: Georgia, 'Times New Roman', serif;
+    --font-readout: ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1016; color: var(--ink); font-family: var(--font-ui); }
+  #game, #game canvas { position: fixed; inset: 0; display: block; }
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  .panel { background: var(--panel); border: 1px solid var(--hairline); border-radius: 3px; }
+
+  #crosshair { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); --gap: 5px; }
+  #crosshair i { position: absolute; background: var(--ink); opacity: .92; }
+  #crosshair i:nth-child(1) { left: 10px; top: calc(5px - var(--gap)); width: 2px; height: 7px; }
+  #crosshair i:nth-child(2) { left: 10px; bottom: calc(5px - var(--gap)); width: 2px; height: 7px; }
+  #crosshair i:nth-child(3) { top: 10px; left: calc(5px - var(--gap)); height: 2px; width: 7px; }
+  #crosshair i:nth-child(4) { top: 10px; right: calc(5px - var(--gap)); height: 2px; width: 7px; }
+  #crosshair .dot { left: 10px; top: 10px; width: 2px; height: 2px; }
+  #hitmarker { position: fixed; left: 50%; top: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%) rotate(45deg); opacity: 0; }
+  #hitmarker.on { opacity: 1; }
+  #hitmarker.kill i { background: var(--danger); }
+  #hitmarker.head i { background: var(--accent); }
+  #hitmarker i { position: absolute; background: var(--ink); }
+  #hitmarker i:nth-child(1) { left: 12px; top: 0; width: 2px; height: 8px; }
+  #hitmarker i:nth-child(2) { left: 12px; bottom: 0; width: 2px; height: 8px; }
+  #hitmarker i:nth-child(3) { top: 12px; left: 0; height: 2px; width: 8px; }
+  #hitmarker i:nth-child(4) { top: 12px; right: 0; height: 2px; width: 8px; }
+  #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 120ms linear; background: radial-gradient(ellipse at center, transparent 55%, rgba(192, 57, 43, .45) 100%); }
+  #hurt.on { opacity: 1; }
+  #flash { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: #fff; }
+
+  #topbar { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); text-align: center; padding: 6px 22px 8px; }
+  #timer-value { font-family: var(--font-readout); font-size: 30px; letter-spacing: .04em; }
+  #timer-value.planted { color: var(--accent); animation: pulse 1s infinite; }
+  #timer-value.low { color: var(--danger); }
+  @keyframes pulse { 50% { opacity: .55; } }
+  #score-value { margin-top: 2px; font-family: var(--font-readout); font-size: 14px; }
+  #score-value .a { color: #e06a4a; } #score-value .m { color: #7fb2e0; }
+  #round-label { margin-top: 1px; font-family: var(--font-readout); font-size: 11px; color: var(--muted); letter-spacing: .12em; }
+  #objective { margin-top: 2px; font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  #plant-timer { margin-top: 2px; font-family: var(--font-readout); font-size: 12px; color: var(--accent); }
+
+  #radar-wrap { position: fixed; top: 14px; left: 14px; padding: 6px; }
+  #radar-wrap .cap { font-family: var(--font-readout); font-size: 10px; letter-spacing: .14em; color: var(--muted); margin-bottom: 4px; }
+  #radar { display: block; }
+
+  #alive { position: fixed; top: 14px; right: 14px; text-align: right; font-size: 13px; line-height: 1.9; padding: 8px 12px; }
+  #alive .row { display: flex; gap: 8px; justify-content: flex-end; align-items: baseline; }
+  #alive .label { color: var(--muted); font-family: var(--font-readout); font-size: 11px; }
+  #feed { position: fixed; top: 130px; right: 14px; width: 330px; text-align: right; font-size: 13px; }
+  .feed-row { margin-bottom: 4px; padding: 3px 8px; background: rgba(11, 16, 22, .72); border-right: 2px solid var(--hairline); color: var(--muted); }
+  .feed-row.kill { color: var(--ink); border-right-color: var(--danger); }
+  .feed-row.plant, .feed-row.win { color: var(--accent); border-right-color: var(--accent); }
+  .feed-row.defuse { color: #7fb2e0; border-right-color: #7fb2e0; }
+  .feed-row svg { vertical-align: -2px; margin-right: 4px; }
+
+  #banner { position: fixed; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; }
+  #banner[hidden] { display: none; }
+  #banner-title { font-size: 32px; font-weight: 600; letter-spacing: .02em; text-shadow: 0 2px 12px rgba(0,0,0,.7); }
+  #banner-sub { margin-top: 6px; font-size: 15px; color: var(--muted); text-shadow: 0 1px 8px rgba(0,0,0,.7); }
+  #radio { position: fixed; top: 31%; left: 50%; transform: translateX(-50%); padding: 6px 14px; font-size: 13px; color: var(--accent); letter-spacing: .06em; }
+  #radio[hidden] { display: none; }
+  #progress { position: fixed; left: 50%; top: 58%; transform: translateX(-50%); width: 260px; text-align: center; }
+  #progress[hidden] { display: none; }
+  #progress-label { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  #progress-track { height: 6px; background: rgba(214,173,96,.25); border-radius: 3px; overflow: hidden; }
+  #progress-fill { height: 100%; width: 0; background: var(--accent); }
+
+  #health { position: fixed; left: 24px; bottom: 20px; padding: 10px 14px; }
+  #health-row { display: flex; align-items: baseline; gap: 8px; }
+  #health-value { font-family: var(--font-readout); font-size: 44px; line-height: 1; }
+  #armor-value { font-family: var(--font-readout); font-size: 14px; color: #7fb2e0; }
+  #health-label { font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  #health-track { margin-top: 6px; width: 180px; height: 5px; background: rgba(214,173,96,.25); border-radius: 3px; overflow: hidden; }
+  #health-bar { height: 100%; width: 100%; background: var(--ink); }
+  #health-bar.low { background: var(--danger); }
+  #money-value { margin-top: 8px; font-family: var(--font-readout); font-size: 18px; color: var(--accent); }
+  #carrier-value { margin-top: 2px; font-size: 12px; color: var(--muted); }
+
+  #ammo { position: fixed; right: 24px; bottom: 20px; text-align: right; padding: 10px 14px; }
+  #ammo-row { display: flex; align-items: baseline; gap: 8px; justify-content: flex-end; }
+  #ammo-mag { font-family: var(--font-readout); font-size: 52px; line-height: 1; }
+  #ammo-reserve { font-family: var(--font-readout); font-size: 16px; color: var(--muted); }
+  #weapon-name { margin-top: 4px; font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  #weapon-strip { margin-top: 8px; display: flex; gap: 10px; justify-content: flex-end; font-family: var(--font-readout); font-size: 10px; color: var(--muted); }
+  #weapon-strip .strip-item { display: flex; align-items: center; gap: 3px; color: var(--ink); }
+  #weapon-strip .strip-item.dim { opacity: .4; }
+  #weapon-strip b { color: var(--accent); }
+  #weapon-strip svg { color: var(--accent); }
+
+  #hint { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); font-size: 12px; color: var(--muted); text-align: center; }
+
+  #scope { position: fixed; inset: 0; pointer-events: none; }
+  #scope[hidden] { display: none; }
+  #scope .vignette { position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 31%, rgba(0,0,0,.92) 46%, #000 60%); }
+  #scope .lens { position: absolute; left: 50%; top: 50%; width: 62vmin; height: 62vmin; transform: translate(-50%, -50%); border: 1px solid rgba(214,173,96,.5); border-radius: 50%; }
+  #scope .cross-v { position: absolute; left: 50%; top: 8%; bottom: 8%; width: 1px; background: rgba(239,233,220,.8); transform: translateX(-50%); }
+  #scope .cross-h { position: absolute; top: 50%; left: 8%; right: 8%; height: 1px; background: rgba(239,233,220,.8); transform: translateY(-50%); }
+  #scope .scope-zoom { position: absolute; left: 50%; top: 76%; transform: translateX(-50%); font-family: var(--font-readout); font-size: 13px; color: var(--accent); letter-spacing: .2em; }
+
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(11, 16, 22, .82); pointer-events: auto; }
+  .overlay[hidden] { display: none; }
+  .overlay .panel { width: min(560px, 100%); padding: 34px 38px; text-align: center; }
+  #overlay-title { font-size: 34px; letter-spacing: .04em; color: var(--accent); }
+  #overlay-copy { margin-top: 14px; font-size: 14px; line-height: 1.8; color: var(--muted); }
+  #play { margin-top: 22px; padding: 12px 30px; font-family: var(--font-readout); font-size: 15px; letter-spacing: .12em; color: #0b1016; background: var(--accent); border: none; border-radius: 3px; cursor: pointer; }
+  #play:hover { filter: brightness(1.1); }
+
+  #buy-menu { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(11, 16, 22, .55); pointer-events: auto; }
+  #buy-menu[hidden] { display: none; }
+  #buy-menu .panel { width: min(860px, 100%); padding: 26px 30px; }
+  #buy-head { display: flex; justify-content: space-between; align-items: baseline; }
+  #buy-head h2 { margin: 0; font-size: 22px; letter-spacing: .06em; color: var(--accent); }
+  #buy-cash { font-family: var(--font-readout); font-size: 22px; color: var(--accent); }
+  #buy-sub { margin-top: 4px; font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  #buy-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .buy-item { display: grid; grid-template-columns: 52px 1fr auto; gap: 4px 10px; align-items: center; text-align: left; padding: 12px; background: rgba(239, 233, 220, .05); border: 1px solid var(--hairline); border-radius: 3px; color: var(--ink); font-family: var(--font-ui); cursor: pointer; }
+  .buy-item:hover { background: rgba(214, 173, 96, .14); border-color: var(--accent); }
+  .buy-item .buy-svg { grid-row: span 2; color: var(--accent); }
+  .buy-item .buy-name { font-size: 14px; font-weight: 600; }
+  .buy-item .buy-desc { font-size: 11px; color: var(--muted); grid-column: 2; }
+  .buy-item .buy-price { font-family: var(--font-readout); font-size: 15px; color: var(--accent); grid-row: span 2; }
+  #buy-foot { margin-top: 14px; font-size: 12px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud">
+  <div id="radar-wrap" class="panel"><div class="cap">VERDIGRIS TERMINAL</div><canvas id="radar" width="190" height="156"></canvas></div>
+  <div id="topbar" class="panel">
+    <div id="timer-value">1:40</div>
+    <div id="score-value"><span class="a">AURORA 0</span> — <span class="m">0 MERIDIAN</span></div>
+    <div id="round-label">ROUND 1 / 9</div>
+    <div id="objective">Plant the charge at Site A or Site B</div>
+    <div id="plant-timer"></div>
+  </div>
+  <div id="alive" class="panel">
+    <div class="row"><span class="label">AURORA</span><span id="alive-aurora"></span></div>
+    <div class="row"><span class="label">MERIDIAN</span><span id="alive-meridian"></span></div>
+  </div>
+  <div id="feed"></div>
+  <div id="crosshair"><i></i><i></i><i></i><i></i><span class="dot"></span></div>
+  <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+  <div id="hurt"></div>
+  <div id="flash"></div>
+  <div id="banner" hidden><div id="banner-title"></div><div id="banner-sub"></div></div>
+  <div id="radio" class="panel" hidden></div>
+  <div id="progress" hidden><div id="progress-label"></div><div id="progress-track"><div id="progress-fill"></div></div></div>
+  <div id="health" class="panel">
+    <div id="health-row"><span id="health-value">100</span><span id="armor-value"></span><span id="health-label">Health</span></div>
+    <div id="health-track"><div id="health-bar"></div></div>
+    <div id="money-value">$800</div>
+    <div id="carrier-value">Charge: YOU — hold E in a site to plant</div>
+  </div>
+  <div id="ammo" class="panel">
+    <div id="ammo-row"><span id="ammo-mag">15</span><span id="ammo-reserve">/ 60</span></div>
+    <div id="weapon-name">Vesper-9 Sidearm</div>
+    <div id="weapon-strip"></div>
+  </div>
+  <div id="hint">WASD move · Shift silent walk · Ctrl crouch · Space jump · R reload · B buy · E plant / defuse · G grenade</div>
+  <div id="scope" hidden>
+    <div class="vignette"></div><div class="lens"></div>
+    <div class="cross-v"></div><div class="cross-h"></div>
+    <div class="scope-zoom">4x</div>
+  </div>
+  <div id="buy-menu" hidden>
+    <div class="panel">
+      <div id="buy-head"><h2>BUY — ROUND EQUIPMENT</h2><span id="buy-cash">$800</span></div>
+      <div id="buy-sub">Verdigris Terminal Quartermaster · B to close</div>
+      <div id="buy-grid"></div>
+      <div id="buy-foot">Click an item to buy · Weapons stay in your loadout for the round · Armor and kit are per-round</div>
+    </div>
+  </div>
+  <div id="overlay" class="overlay" hidden>
+    <div class="panel">
+      <div id="overlay-title">VERDIGRIS TERMINAL</div>
+      <div id="overlay-copy"></div>
+      <button id="play">DEPLOY — ROUND 1</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
