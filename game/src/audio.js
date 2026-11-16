@@ -1,4 +1,4 @@
-// VERDIGRIS TERMINAL — audio.js: the whole soundscape is synthesized with Web Audio.
+// VERDIGRIS TERMINAL - audio.js: the whole soundscape is synthesized with Web Audio.
 // Per-gun reports (noise transient + pitched body + hall tail), reload clicks,
 // surface footsteps (silent on Shift-walk), headshot dink, smoke hiss, flash ring,
 // frag boom, plant beep. No audio files, no network.

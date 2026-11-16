@@ -1,4 +1,4 @@
-// VERDIGRIS TERMINAL — main.js: boot and the one loop.
+// VERDIGRIS TERMINAL - main.js: boot and the one loop.
 // Fixed 60 Hz simulation feeding a render at the display rate.
 // ?shot=combat|buy|plant|sniper with &seed=N stages a deterministic frame for a
 // capture, renders it twice, then freezes it and sets window.__shotReady.
@@ -141,7 +141,7 @@ const rounds = createRounds(state, {
   onRoundStart(round) {
     if (shot) return;
     if (round === 1) { hud.showBuy(true, playerActor.money); document.exitPointerLock?.(); }
-    else hud.showBanner(`Round ${round} — buy phase`, 'Press B to open the shop', 2200);
+    else hud.showBanner(`Round ${round} - buy phase`, 'Press B to open the shop', 2200);
     syncHud();
   },
   onLive() { hud.showBuy(false); hud.showBanner('Round live', 'Plant the charge or eliminate MERIDIAN', 2200); },
@@ -154,14 +154,14 @@ const rounds = createRounds(state, {
   },
   onMatchEnd(winner) {
     if (document.pointerLockElement) document.exitPointerLock();
-    if (winner === 'draw') hud.showOverlay('matchEnd', { title: 'Match drawn', copy: `Nine rounds, ${state.score.aurora} — ${state.score.meridian}. Neither squad broke the tie.` });
-    else if (winner === 'aurora') hud.showOverlay('matchEnd', { title: 'AURORA wins the match', copy: `${state.score.aurora} — ${state.score.meridian} over ${state.round} rounds. The terminal is yours.` });
-    else hud.showOverlay('matchEnd', { title: 'MERIDIAN wins the match', copy: `${state.score.aurora} — ${state.score.meridian} over ${state.round} rounds. The charge never went off.` });
+    if (winner === 'draw') hud.showOverlay('matchEnd', { title: 'Match drawn', copy: `Nine rounds, ${state.score.aurora} - ${state.score.meridian}. Neither squad broke the tie.` });
+    else if (winner === 'aurora') hud.showOverlay('matchEnd', { title: 'AURORA wins the match', copy: `${state.score.aurora} - ${state.score.meridian} over ${state.round} rounds. The terminal is yours.` });
+    else hud.showOverlay('matchEnd', { title: 'MERIDIAN wins the match', copy: `${state.score.aurora} - ${state.score.meridian} over ${state.round} rounds. The charge never went off.` });
   },
   onPlant(site) {
     audio.plantBeep(true);
-    hud.showBanner('Charge planted', `Site ${site} — ${state.fuseTime | 0}s to detonation`, 3000);
-    hud.showRadio('RADIO: Charge planted — defend the site');
+    hud.showBanner('Charge planted', `Site ${site} - ${state.fuseTime | 0}s to detonation`, 3000);
+    hud.showRadio('RADIO: Charge planted - defend the site');
     document.getElementById('objective').textContent = 'Defend the planted charge';
   },
   onDetonate() { audio.explosion(); document.getElementById('objective').textContent = 'Plant the charge at Site A or Site B'; },
@@ -272,10 +272,10 @@ function siteAt(x, z) {
   return null;
 }
 function carrierName() {
-  if (state.carrier === 'player') return 'Charge: YOU — hold E in a site to plant';
+  if (state.carrier === 'player') return 'Charge: YOU - hold E in a site to plant';
   if (!state.carrier) return 'Charge: dropped';
   const bot = bots.find((b) => b.id === state.carrier);
-  return bot ? `Charge: ${bot.name}` : 'Charge: —';
+  return bot ? `Charge: ${bot.name}` : 'Charge: -';
 }
 
 function syncHud() {
@@ -328,7 +328,11 @@ function playerShoot() {
   // Muzzle -> impact tracer + casing + impact sparks/decal.
   _right.set(1, 0, 0).applyQuaternion(camera.quaternion);
   render.spawnCasing(_eye, _right);
-  const muzzlePos = _eye.clone().addScaledVector(_dir, 0.6);
+  // Tracer starts at the gun's muzzle (offset from the eye), not on the view
+  // axis: a tracer spawned on the view axis is seen end-on as a big square
+  // over the crosshair. From the muzzle it reads as a diagonal streak.
+  camera.updateMatrixWorld();
+  const muzzlePos = camera.localToWorld(new THREE.Vector3(0.28, -0.26, -0.87));
   if (result.point) {
     render.spawnTracer(muzzlePos, new THREE.Vector3(result.point[0], result.point[1], result.point[2]), def.tracer);
     if (!result.hit) { render.spawnSparks(result.point, 5); render.spawnDecal(result.point, [0, 0, 1]); }
@@ -374,7 +378,7 @@ function botFireShot(bot, target) {
 function onPlayerDown() {
   playerActor.deaths += 1;
   spectateTarget = nextSpectateTarget(state, bots);
-  hud.showBanner('You are down', spectateTarget ? `Spectating ${spectateTarget.name} — click to cycle` : 'Your squad fights on', 2600);
+  hud.showBanner('You are down', spectateTarget ? `Spectating ${spectateTarget.name} - click to cycle` : 'Your squad fights on', 2600);
   if (document.pointerLockElement) document.exitPointerLock();
 }
 
@@ -574,14 +578,21 @@ function runShot(name) {
     state.phase = 'live';
     state.roundTime = roundSeconds;
     weapons.give('sovereign');
+    // Smoke first so it grows to full size during the settle (render.step grows
+    // the cloud each tick; a cloud spawned after the settle stays a small puff).
+    // Kept small (r 3.5) and west of the line of fire: a bigger cloud eats the
+    // player's shot (smokeBlocks) and hides the sign and the target.
+    state.smokes.push({ x: -27, y: 1, z: -6, r: 3.5, until: state.time + 16 });
+    render.spawnSmoke(-27, 1, -6, 3.5);
     settle(300);
-    // Stage the fight in the sunlit Conservatory: a MERIDIAN defender by the
+    // Stage the fight in the sunlit Conservatory: the SITE A sign reads fully
+    // above the lane, a MERIDIAN defender stands in the line of fire before the
     // fountain, another at the A door, smoke drifting across the lane. The first
     // defender is softened so this shot kills: the killfeed and hitmarker show.
     const defenders = bots.filter((b) => b.team === 'meridian' && b.alive);
     if (defenders[0]) {
-      defenders[0].body.position.set(-26, 0, -14);
-      defenders[0].group.position.set(-26, 0, -14);
+      defenders[0].body.position.set(-23, 0, -11);
+      defenders[0].group.position.set(-23, 0, -11);
       defenders[0].body.yaw = Math.PI * 0.75;
       defenders[0].group.rotation.y = defenders[0].body.yaw;
       defenders[0].health = 30;
@@ -589,18 +600,29 @@ function runShot(name) {
     if (defenders[1]) {
       defenders[1].body.position.set(-18, 0, -8);
       defenders[1].group.position.set(-18, 0, -8);
+      defenders[1].body.yaw = Math.PI * 0.6;
+      defenders[1].group.rotation.y = defenders[1].body.yaw;
     }
-    state.smokes.push({ x: -30, y: 1, z: -8, r: 5.5, until: state.time + 16 });
-    render.spawnSmoke(-30, 1, -8, 5.5);
-    playerBody.position.set(-14, 0, 2);
+    playerBody.position.set(-15, 0, -1);
     settle(6);
     const target = defenders[0];
     // Aim at the head: a headshot kill puts "You ⌖ <name>" in the feed.
     aimAt(new THREE.Vector3(target.body.position.x, target.body.position.y + 1.52, target.body.position.z));
     playerShoot();
-    // Freeze the hitmarker on for the capture (its wall-clock timeout would
-    // otherwise hide it before the slow SwiftShader frame is grabbed).
-    document.getElementById('hitmarker').classList.add('on', 'kill', 'head');
+    // Muzzle flash at the gun's muzzle (bottom-right of the frame), not along
+    // the view axis: sparks on the view axis land dead-center and read as a
+    // glitch square over the crosshair. Impact burst on the enemy's head.
+    camera.updateMatrixWorld();
+    const muzzle = camera.localToWorld(new THREE.Vector3(0.28, -0.26, -0.87));
+    render.spawnSparks([muzzle.x, muzzle.y, muzzle.z], 4);
+    render.spawnSparks([target.body.position.x, target.body.position.y + 1.52, target.body.position.z], 6);
+    // A lateral enemy tracer across the open court, east of the smoke so it
+    // stays visible, so the frame reads as a firefight, not a posed shot.
+    render.spawnTracer(new THREE.Vector3(-22, 1.3, -10), new THREE.Vector3(-16, 1.3, -14), 0x9fd8ff);
+    hud.showRadio('RADIO: Contact at Site A, engaging', true);
+    // Pin the hitmarker on (sticky: no wall-clock timeout) so it survives the
+    // slow SwiftShader capture frames.
+    hud.hitMarker(true, true, true);
     syncHud();
     paintTwiceThenReady();
     return;
@@ -614,16 +636,17 @@ function runShot(name) {
     // the capture needs the charge in the open court, not wherever a bot stood.
     rounds.plantCharge('B', 'Ember', 24, -13);
     // Charge in the open court south of the parked tram (not inside the tram car),
-    // player south of it with the tram's flank in view, teammate covering the door.
-    playerBody.position.set(24, -1.2, -8);
+    // player south-west of it with the tram's flank and the B planters in view,
+    // teammate covering the site.
+    playerBody.position.set(21, -1.2, -8);
     const defender = bots.find((b) => b.team === 'aurora' && b.alive);
     if (defender) {
-      defender.body.position.set(18, -1.2, -9);
-      defender.group.position.set(18, -1.2, -9);
+      defender.body.position.set(26, -1.2, -9);
+      defender.group.position.set(26, -1.2, -9);
       defender.body.yaw = Math.PI;
       defender.group.rotation.y = Math.PI;
     }
-    aimAt(new THREE.Vector3(24, -0.6, -13));
+    aimAt(new THREE.Vector3(25, -0.5, -14));
     settle(4);
     paintTwiceThenReady();
     return;
@@ -634,6 +657,19 @@ function runShot(name) {
   state.roundTime = roundSeconds;
   weapons.give('longbow');
   settle(240);
+  // Stage three MERIDIAN defenders in staggered tactical stances down the Mid
+  // colonnade: one crouched behind cover, one peeking, one moving.
+  const mids = bots.filter((b) => b.team === 'meridian');
+  const stage = [[-3, -14, 1], [3, -16, 2], [0, -22, 0]];
+  mids.slice(0, 3).forEach((bot, i) => {
+    const [sx, sz, stance] = stage[i];
+    bot.alive = true; bot.health = 100;
+    bot.body.position.set(sx, 0, sz);
+    bot.group.position.set(sx, 0, sz);
+    bot.body.yaw = Math.PI;
+    bot.group.rotation.y = Math.PI;
+    bot.group.userData.stance = stance;
+  });
   // North of the Mid vent lintel (it would fill a scoped frame from the south):
   // the colonnade, skylight trusses and planters run away to the north.
   playerBody.position.set(0, 0, 6);

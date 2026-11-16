@@ -1,4 +1,4 @@
-// VERDIGRIS TERMINAL — map.js: the 78 x 64 m Art-Deco Botanical Conservatory &
+// VERDIGRIS TERMINAL - map.js: the 78 x 64 m Art-Deco Botanical Conservatory &
 // Sunken Metro Concourse. Three lanes (A / Mid / B), a Vent/Ticket Connector, a
 // mezzanine catwalk over Site A, a sunken Site B with a parked art-deco tram.
 // Every solid exports an AABB collider; ramps are smooth height zones, not steps.
@@ -95,6 +95,8 @@ export function createMap(scene, T) {
   const matFloor = new THREE.MeshStandardMaterial({ map: T.travertine.map, roughnessMap: T.travertine.roughnessMap, roughness: 0.9, metalness: 0.02 });
   const matFloorMark = new THREE.MeshStandardMaterial({ map: T.floorMark.map, roughnessMap: T.floorMark.roughnessMap, roughness: 0.9, metalness: 0.02 });
   const matTile = new THREE.MeshStandardMaterial({ map: T.tile.map, roughnessMap: T.tile.roughnessMap, roughness: 0.35, metalness: 0.05 });
+  const matTileWarm = new THREE.MeshStandardMaterial({ map: T.tileWarm.map, roughnessMap: T.tileWarm.roughnessMap, roughness: 0.35, metalness: 0.05 });
+  const matPlaster = new THREE.MeshStandardMaterial({ map: T.plaster.map, roughnessMap: T.plaster.roughnessMap, roughness: 0.9, metalness: 0.02 });
   const matBronze = new THREE.MeshStandardMaterial({ map: T.bronze.map, roughnessMap: T.bronze.roughnessMap, roughness: 0.35, metalness: 0.85 });
   const matWood = new THREE.MeshStandardMaterial({ map: T.wood.map, roughnessMap: T.wood.roughnessMap, roughness: 0.8, metalness: 0.02 });
   const matStone = new THREE.MeshStandardMaterial({ color: 0xcfc4ae, roughness: 0.85, metalness: 0.02 });
@@ -158,16 +160,36 @@ export function createMap(scene, T) {
   box(20.5, 0.4, 0.6, matBronze, -28, 8.6, -27); box(20.5, 0.4, 0.6, matBronze, -28, 8.6, -7);
   box(0.6, 0.4, 20.5, matBronze, -38, 8.6, -17); box(0.6, 0.4, 20.5, matBronze, -18, 8.6, -17);
 
-  // Perimeter walls (verdigris tile, 5 m high).
-  const wall = (cx, cz, w, d) => { box(w, 5, d, matTile, cx, 2.5, cz); addCollider(cx, cz, w, d, 5); };
-  wall(0, -32, 80, 1); wall(0, 32, 80, 1); wall(-39, 0, 1, 66); wall(39, 0, 1, 66);
+  // Perimeter walls (verdigris tile, 5 m high). Site A runs warm, Site B cool.
+  const wall = (cx, cz, w, d, mat = matTile) => { box(w, 5, d, mat, cx, 2.5, cz); addCollider(cx, cz, w, d, 5); };
+  wall(0, -32, 80, 1); wall(0, 32, 80, 1); wall(-39, 0, 1, 66, matTileWarm); wall(39, 0, 1, 66);
   // z = -6 cross-wall with three doors: A (-22..-14), Mid (-7..7), B (14..22).
-  wall(-30.5, -6, 17, 1); wall(-10.5, -6, 7, 1); wall(10.5, -6, 7, 1); wall(30.5, -6, 17, 1);
+  wall(-30.5, -6, 17, 1, matTileWarm); wall(-10.5, -6, 7, 1); wall(10.5, -6, 7, 1); wall(30.5, -6, 17, 1);
   // Vertical lane walls x = +/-14, z -6..20, with the Connector gap at z 2..8.
-  wall(-14, -2, 1, 8); wall(-14, 14, 1, 12); wall(14, -2, 1, 8); wall(14, 14, 1, 12);
+  wall(-14, -2, 1, 8, matTileWarm); wall(-14, 14, 1, 12, matTileWarm); wall(14, -2, 1, 8); wall(14, 14, 1, 12);
   // North lane wall x = 14, z -32..-16 with B flank gap at z -21..-15.
   wall(14, -28.5, 1, 7); wall(14, -12.5, 1, 5);
-  wall(-14, -19, 1, 26); // west lane wall, full height north of the connector
+  wall(-14, -19, 1, 26, matTileWarm); // west lane wall, full height north of the connector
+  // Plaster wainscot band + bronze trim break up the long tile walls.
+  for (const [wx, wz, ww, wd] of [[0, -31.4, 78, 0.15], [0, 31.4, 78, 0.15]]) {
+    box(ww, 1.1, wd, matPlaster, wx, 0.55, wz);
+    box(ww, 0.12, wd + 0.06, matBronze, wx, 1.16, wz);
+  }
+  for (const [wx, wz, ww, wd] of [[-38.4, 0, 0.15, 64], [38.4, 0, 0.15, 64]]) {
+    box(ww, 1.1, wd, matPlaster, wx, 0.55, wz);
+    box(ww + 0.06, 0.12, wd, matBronze, wx, 1.16, wz);
+  }
+  // Vents, pipes and light fixtures on the long walls.
+  for (const vx of [-20, 20]) {
+    box(1.6, 1, 0.12, matDark, vx, 3.4, -31.4);
+    box(1.6, 0.12, 0.16, matBronze, vx, 3.95, -31.4);
+    box(1.6, 1, 0.12, matDark, vx, 3.4, 31.4);
+    box(1.6, 0.12, 0.16, matBronze, vx, 3.95, 31.4);
+  }
+  for (const px of [-38.4, 38.4]) {
+    box(0.18, 5, 0.18, matBronze, px, 2.5, 12);
+    box(0.18, 5, 0.18, matBronze, px, 2.5, -12);
+  }
   // Crouch-only vent lintel across Mid at z = 12 (duck under, 1.15 m clearance).
   box(14, 2.9, 0.8, matTile, 0, 2.6, 12);
   colliders.push({ minX: -7, maxX: 7, minZ: 11.6, maxZ: 12.4, minY: 1.15, maxY: 4.05 });
@@ -210,19 +232,19 @@ export function createMap(scene, T) {
   // Botanical planters along Mid + Connector (emerald foliage, instanced look via clones).
   const leafGeo = new THREE.ConeGeometry(0.55, 1.6, 6);
   const leafGeo2 = new THREE.SphereGeometry(0.7, 7, 5);
-  const foliage = new THREE.InstancedMesh(leafGeo, matLeaf, 90);
-  const foliage2 = new THREE.InstancedMesh(leafGeo2, matLeaf2, 60);
+  const foliage = new THREE.InstancedMesh(leafGeo, matLeaf, 108);
+  const foliage2 = new THREE.InstancedMesh(leafGeo2, matLeaf2, 72);
   foliage.castShadow = true; foliage2.castShadow = true;
   const m4 = new THREE.Matrix4();
-  const planterSpots = [[-9, 22], [9, 22], [-9, -24], [9, -24], [-20, 10], [20, 10], [-36, -8], [36, -8], [-11, -14], [11, -14]];
+  const planterSpots = [[-9, 22], [9, 22], [-9, -24], [9, -24], [-20, 10], [20, 10], [-36, -8], [36, -8], [-11, -14], [11, -14], [-7, -18], [7, -18]];
   let fi = 0, fj = 0;
   for (const [px, pz] of planterSpots) {
     box(2.4, 0.8, 2.4, matWood, px, 0.4, pz); addCollider(px, pz, 2.4, 2.4, 0.8);
-    for (let k = 0; k < 9 && fi < 90; k += 1) {
+    for (let k = 0; k < 9 && fi < 108; k += 1) {
       m4.makeTranslation(px - 0.8 + (k % 3) * 0.8, 1.4 + (k % 2) * 0.5, pz - 0.8 + ((k / 3) | 0) * 0.8);
       foliage.setMatrixAt(fi, m4); fi += 1;
     }
-    for (let k = 0; k < 6 && fj < 60; k += 1) {
+    for (let k = 0; k < 6 && fj < 72; k += 1) {
       m4.makeTranslation(px - 0.7 + (k % 3) * 0.7, 1.1, pz - 0.7 + ((k / 3) | 0) * 0.7);
       foliage2.setMatrixAt(fj, m4); fj += 1;
     }

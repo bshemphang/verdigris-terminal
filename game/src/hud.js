@@ -1,4 +1,4 @@
-// VERDIGRIS TERMINAL — hud.js: the editorial tactical HUD.
+// VERDIGRIS TERMINAL - hud.js: the editorial tactical HUD.
 // Obsidian-glass panels, brass hairlines, tabular monospace numerals, inline SVG
 // silhouettes (no emojis). Top-center score + alive diamond pips + Round X/9 +
 // timer; top-left Canvas2D radar; top-right kill feed; bottom health/armor/cash/
@@ -62,19 +62,19 @@ export function createHud(opts) {
     bannerTimer = setTimeout(() => { els.banner.hidden = true; }, ms);
   }
   let radioTimer = 0;
-  function showRadio(text) {
+  function showRadio(text, sticky) {
     els.radio.textContent = text;
     els.radio.hidden = false;
     clearTimeout(radioTimer);
-    radioTimer = setTimeout(() => { els.radio.hidden = true; }, 3200);
+    if (!sticky) radioTimer = setTimeout(() => { els.radio.hidden = true; }, 3200);
   }
   let hitTimer = 0;
-  function hitMarker(kill, headshot) {
+  function hitMarker(kill, headshot, sticky) {
     els.hitmarker.classList.add('on');
     els.hitmarker.classList.toggle('kill', !!kill);
     els.hitmarker.classList.toggle('head', !!headshot);
     clearTimeout(hitTimer);
-    hitTimer = setTimeout(() => els.hitmarker.classList.remove('on'), kill ? 500 : 160);
+    if (!sticky) hitTimer = setTimeout(() => els.hitmarker.classList.remove('on'), kill ? 500 : 160);
   }
   function hurtFlash() {
     els.hurt.classList.add('on');
@@ -82,7 +82,7 @@ export function createHud(opts) {
   }
 
   function setScore(a, m, round) {
-    setHtml(els.score, 'score', `<span class="a">AURORA ${a}</span> — <span class="m">${m} MERIDIAN</span>`);
+    setHtml(els.score, 'score', `<span class="a">AURORA ${a}</span> - <span class="m">${m} MERIDIAN</span>`);
     setText(els.round, 'round', `ROUND ${round} / 9`);
   }
   function setAlive(aAlive, aTotal, mAlive, mTotal) {
@@ -106,7 +106,7 @@ export function createHud(opts) {
   }
   function setMoney(cash) { setText(els.money, 'money', `$${cash}`); }
   function setAmmo(mag, reserve, name) {
-    setText(els.ammoMag, 'mag', mag === Infinity ? '—' : String(mag));
+    setText(els.ammoMag, 'mag', mag === Infinity ? '-' : String(mag));
     setText(els.ammoRes, 'res', reserve === Infinity ? '' : `/ ${reserve}`);
     setText(els.weaponName, 'wname', name);
   }
@@ -125,7 +125,7 @@ export function createHud(opts) {
     const items = [
       ['1', 'KARAMBIT', WEAPON_SVG.karambit, true],
       ['2', 'VESPER-9', WEAPON_SVG.vesper, true],
-      ['3', owned.primary || '—', WEAPON_SVG[owned.primaryId] || SVG.rifle, !!owned.primary],
+      ['3', owned.primary || '-', WEAPON_SVG[owned.primaryId] || SVG.rifle, !!owned.primary],
       ['4', `SMOKE ×${grenadesOf.smoke || 0}`, SVG.smoke, (grenadesOf.smoke || 0) > 0],
       ['5', `FLASH ×${grenadesOf.flash || 0}`, SVG.flash, (grenadesOf.flash || 0) > 0],
       ['6', `FRAG ×${grenadesOf.frag || 0}`, SVG.frag, (grenadesOf.frag || 0) > 0],
@@ -231,8 +231,8 @@ export function createHud(opts) {
     els.overlay.hidden = false;
     if (kind === 'menu') {
       els.overlayTitle.textContent = 'VERDIGRIS TERMINAL';
-      els.overlayCopy.innerHTML = 'AURORA attacks · MERIDIAN defends<br>Plant the Resonator Charge at Site A or Site B — or eliminate MERIDIAN.<br><br>WASD move · Shift walk silent · Ctrl crouch · Space jump<br>Click fire · R reload · 1–3 weapons · 4–6 grenades · G throw · E plant / defuse<br>B buy menu · RMB scope (Longbow-M2)';
-      $('play').textContent = 'DEPLOY — ROUND 1';
+      els.overlayCopy.innerHTML = 'AURORA attacks · MERIDIAN defends<br>Plant the Resonator Charge at Site A or Site B - or eliminate MERIDIAN.<br><br>WASD move · Shift walk silent · Ctrl crouch · Space jump<br>Click fire · R reload · 1–3 weapons · 4–6 grenades · G throw · E plant / defuse<br>B buy menu · RMB scope (Longbow-M2)';
+      $('play').textContent = 'DEPLOY - ROUND 1';
     } else if (kind === 'paused') {
       els.overlayTitle.textContent = 'PAUSED';
       els.overlayCopy.textContent = 'Click to resume. Your squad holds the terminal.';

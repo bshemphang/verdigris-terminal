@@ -1,4 +1,4 @@
-// VERDIGRIS TERMINAL — sim.js: the fixed 1/60 deterministic simulation.
+// VERDIGRIS TERMINAL - sim.js: the fixed 1/60 deterministic simulation.
 // Kinematics (acceleration, counter-strafe deceleration, crouch, jump, AABB slide),
 // multi-zone hitboxes (Head 3.8x / Chest 1.0x / Legs 0.75x, helmet trims heads),
 // ballistics with wall occlusion + smoke occlusion, grenades, and the round
@@ -276,13 +276,13 @@ export function createRounds(state, hooks) {
   function plantCharge(site, byName, x, z) {
     state.planted = true; state.plantSite = site; state.fuseTime = FUSE_SECONDS;
     state.plantX = x ?? SITES[site].cx; state.plantZ = z ?? SITES[site].cz;
-    logEvent(state, 'plant', `Charge planted at Site ${site} — ${byName}`);
+    logEvent(state, 'plant', `Charge planted at Site ${site} - ${byName}`);
     hooks.onPlant(site);
     if (state.playerActor && byName === state.playerActor.name) state.playerActor.money += ECONOMY.plant;
   }
   function defuseCharge(byName) {
     state.planted = false;
-    logEvent(state, 'defuse', `Charge defused — ${byName}`);
+    logEvent(state, 'defuse', `Charge defused - ${byName}`);
     hooks.onDefuse();
     endRound('meridian', 'Charge defused');
   }

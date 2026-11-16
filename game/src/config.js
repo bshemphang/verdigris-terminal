@@ -1,4 +1,4 @@
-// VERDIGRIS TERMINAL — config.js: the one place for every number the game balances on.
+// VERDIGRIS TERMINAL - config.js: the one place for every number the game balances on.
 // Setting: an ornate sunlit Art-Deco botanical conservatory & sunken metro concourse.
 // Attackers AURORA (crimson / terracotta / brass) vs defenders MERIDIAN (cobalt / ivory / teal).
 export const PALETTE = {

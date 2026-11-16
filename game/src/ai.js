@@ -1,4 +1,4 @@
-// VERDIGRIS TERMINAL — ai.js: 5v5 bots on the nav-graph.
+// VERDIGRIS TERMINAL - ai.js: 5v5 bots on the nav-graph.
 // State machine: BUY -> ADVANCE / HOLD_ANGLE -> ENGAGE (burst fire, counter-strafe
 // and crouch peeks, reaction delay, smoke occlusion) -> INVESTIGATE_SOUND ->
 // ROTATE (on plant / callouts) -> PLANT / DEFUSE. Spectator cycling lives here too.

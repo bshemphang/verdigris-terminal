@@ -1,4 +1,4 @@
-// VERDIGRIS TERMINAL — state.js: the single source of truth for the whole match.
+// VERDIGRIS TERMINAL - state.js: the single source of truth for the whole match.
 // Every module reads and writes this one object; nothing else keeps match state.
 // Phases: 'menu' | 'buy' | 'live' | 'roundEnd' | 'matchEnd'.
 export function createState() {
@@ -11,10 +11,10 @@ export function createState() {
     plantX: 0, plantZ: 0, // world position of the planted charge (beacon anchor)
     carrier: 'player', // 'player' | bot id | null (dropped)
     playerActor: null, members: { aurora: [], meridian: [] },
-    events: [], // {kind, text, at} — kill feed + radio log, newest first
-    shotNoise: [], // {x, z, radius, at} — bots investigate these
-    smokes: [], // {x, y, z, r, until} — live smoke clouds, block bot LOS
-    flashes: [], // {x, y, z, at} — recent flash detonations
+    events: [], // {kind, text, at} - kill feed + radio log, newest first
+    shotNoise: [], // {x, z, radius, at} - bots investigate these
+    smokes: [], // {x, y, z, r, until} - live smoke clouds, block bot LOS
+    flashes: [], // {x, y, z, at} - recent flash detonations
     spectateIndex: 0,
     roundStats: { shots: 0, hits: 0, headshots: 0, kills: 0 },
     winner: null,
@@ -26,7 +26,7 @@ export function logEvent(state, kind, text) {
   if (state.events.length > 24) state.events.length = 24;
 }
 
-// Deterministic RNG (mulberry32) — one stream for the sim, one for bot brains.
+// Deterministic RNG (mulberry32) - one stream for the sim, one for bot brains.
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return function () {

@@ -1,5 +1,5 @@
-// VERDIGRIS TERMINAL — textures.js: every texture is painted once at boot on a
-// 2D canvas — travertine, glazed tile, fluted bronze, wood slats, floor markings and
+// VERDIGRIS TERMINAL - textures.js: every texture is painted once at boot on a
+// 2D canvas - travertine, glazed tile, fluted bronze, wood slats, floor markings and
 // painted site signs. Zero external images; the judge reads code, not assets.
 import * as THREE from 'three';
 
@@ -56,14 +56,14 @@ export function makeTextures() {
     out.travertine = tex(c, 10, 8);
   }
 
-  // Oxidized verdigris glazed subway tile.
-  {
+  // Oxidized verdigris glazed subway tile, painted once, tinted per zone.
+  function paintTile(r, g0, b) {
     const [c, g] = canvas(512, 512);
-    g.fillStyle = '#1f5b5c'; g.fillRect(0, 0, 512, 512);
+    g.fillStyle = `rgb(${r},${g0},${b})`; g.fillRect(0, 0, 512, 512);
     for (let y = 0; y < 8; y += 1) {
       for (let x = 0; x < 8; x += 1) {
         const v = 0.85 + Math.random() * 0.35;
-        g.fillStyle = `rgb(${Math.round(31 * v)},${Math.round(91 * v)},${Math.round(92 * v)})`;
+        g.fillStyle = `rgb(${Math.round(r * v)},${Math.round(g0 * v)},${Math.round(b * v)})`;
         g.fillRect(x * 64 + 2, y * 64 + 2, 60, 60);
         g.fillStyle = 'rgba(255,255,255,0.10)';
         g.fillRect(x * 64 + 2, y * 64 + 2, 60, 8);
@@ -71,7 +71,22 @@ export function makeTextures() {
       }
     }
     speckle(g, 512, 512, 900, ['#0f3a3b', '#3a8f8a'], 0.1, 0.35);
-    out.tile = tex(c, 6, 3);
+    return c;
+  }
+  out.tile = tex(paintTile(31, 91, 92), 6, 3);
+  out.tileWarm = tex(paintTile(62, 98, 76), 6, 3);
+
+  // Warm plaster / concrete band for wainscot and wall breaks.
+  {
+    const [c, g] = canvas(256, 256);
+    g.fillStyle = '#bfae8e'; g.fillRect(0, 0, 256, 256);
+    speckle(g, 256, 256, 1400, ['#a8946e', '#d8cbae', '#8a7a5e'], 0.08, 0.3);
+    g.strokeStyle = 'rgba(90,75,55,0.4)'; g.lineWidth = 2;
+    for (let i = 0; i < 5; i += 1) {
+      g.beginPath(); const y = Math.random() * 256;
+      g.moveTo(0, y); g.lineTo(256, y + (Math.random() * 8 - 4)); g.stroke();
+    }
+    out.plaster = tex(c, 4, 1);
   }
 
   // Fluted bronze ribs.
@@ -139,7 +154,9 @@ export function makeSignTexture(lines, sub) {
   g.strokeStyle = '#d6ad60'; g.lineWidth = 6; g.strokeRect(10, 10, 1004, 236);
   g.strokeStyle = 'rgba(214,173,96,0.5)'; g.lineWidth = 2; g.strokeRect(24, 24, 976, 208);
   g.fillStyle = '#efe9dc'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.font = '700 92px Georgia, serif';
+  let fs = 92;
+  g.font = `700 ${fs}px Georgia, serif`;
+  while (g.measureText(lines).width > 940 && fs > 44) { fs -= 4; g.font = `700 ${fs}px Georgia, serif`; }
   g.fillText(lines, 512, sub ? 104 : 128);
   if (sub) {
     g.font = '400 40px Georgia, serif'; g.fillStyle = '#d6ad60';

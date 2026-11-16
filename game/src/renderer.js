@@ -1,4 +1,4 @@
-// VERDIGRIS TERMINAL — renderer.js: Three.js scene, PMREM IBL baked once at boot,
+// VERDIGRIS TERMINAL - renderer.js: Three.js scene, PMREM IBL baked once at boot,
 // ACES tone mapping, PCF soft skylight shadows, articulated operators, 3D viewmodels
 // with critically-damped spring physics, and pooled InstancedMesh VFX (tracers,
 // casings, sparks, decals, smoke) plus a pooled muzzle-flash light and dust motes.
@@ -76,6 +76,7 @@ export function createRender() {
     aurora: { torso: 0xc0392b, trim: 0xd97b4a, legs: 0x3a2a24, skin: 0xc8a586 },
     meridian: { torso: 0x1f4e79, trim: 0x2e7d7a, legs: 0x23282e, skin: 0xc8a586 },
   };
+  let opCount = 0;
   function makeOperator(team) {
     const m = teamMats[team];
     const g = new THREE.Group();
@@ -83,21 +84,30 @@ export function createRender() {
     const trimMat = new THREE.MeshStandardMaterial({ color: m.trim, roughness: 0.4, metalness: 0.6 });
     const legsMat = new THREE.MeshStandardMaterial({ color: m.legs, roughness: 0.85 });
     const skinMat = new THREE.MeshStandardMaterial({ color: m.skin, roughness: 0.7 });
+    const gunmetal = new THREE.MeshStandardMaterial({ color: 0x3a4048, roughness: 0.4, metalness: 0.7 });
     const add = (geo, mat, x, y, z) => {
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(x, y, z); mesh.castShadow = true; g.add(mesh); return mesh;
     };
     add(new THREE.BoxGeometry(0.52, 0.62, 0.3), torsoMat, 0, 1.12, 0); // torso
     add(new THREE.BoxGeometry(0.54, 0.1, 0.32), trimMat, 0, 1.42, 0); // chest trim
+    add(new THREE.BoxGeometry(0.4, 0.34, 0.08), trimMat, 0, 1.14, 0.18); // chest rig
     add(new THREE.BoxGeometry(0.3, 0.26, 0.3), skinMat, 0, 1.62, 0); // head
     add(new THREE.BoxGeometry(0.34, 0.1, 0.32), trimMat, 0, 1.72, 0); // helmet band
+    add(new THREE.BoxGeometry(0.32, 0.08, 0.06), trimMat, 0, 1.62, 0.17); // visor
+    const rifle = add(new THREE.BoxGeometry(0.07, 0.1, 0.78), gunmetal, 0.12, 1.18, 0.3); // rifle
+    rifle.rotation.x = -0.25;
+    add(new THREE.BoxGeometry(0.06, 0.16, 0.1), trimMat, 0.12, 1.05, 0.28); // rifle magazine
     const armL = add(new THREE.BoxGeometry(0.14, 0.55, 0.16), torsoMat, -0.34, 1.12, 0);
     const armR = add(new THREE.BoxGeometry(0.14, 0.55, 0.16), torsoMat, 0.34, 1.12, 0);
     const legL = add(new THREE.BoxGeometry(0.2, 0.62, 0.22), legsMat, -0.14, 0.36, 0);
     const legR = add(new THREE.BoxGeometry(0.2, 0.62, 0.22), legsMat, 0.14, 0.36, 0);
     // Shoulder lamp: a tiny brass glint so silhouettes read at a glance.
     add(new THREE.BoxGeometry(0.08, 0.08, 0.08), new THREE.MeshStandardMaterial({ color: 0xd6ad60, metalness: 0.9, roughness: 0.25 }), -0.2, 1.44, 0.16);
-    g.userData = { armL, armR, legL, legR };
+    // Stance: 0 upright, 1 crouched behind cover, 2 peeking. Varies per bot so
+    // a squad never reads as identical figures in a row.
+    armL.rotation.x = -0.9; armR.rotation.x = -1.1;
+    g.userData = { armL, armR, legL, legR, stance: opCount++ % 3 };
     return g;
   }
 
@@ -107,9 +117,10 @@ export function createRender() {
   const vmGuns = {};
   function buildGun(def, accent) {
     const g = new THREE.Group();
-    const steel = new THREE.MeshStandardMaterial({ color: 0x2b2f33, roughness: 0.35, metalness: 0.85 });
+    const steel = new THREE.MeshStandardMaterial({ color: 0x565e66, roughness: 0.35, metalness: 0.85 });
     const brass = new THREE.MeshStandardMaterial({ color: 0xd6ad60, roughness: 0.3, metalness: 0.9 });
     const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.8 });
+    const skin = new THREE.MeshStandardMaterial({ color: 0xc8a586, roughness: 0.7 });
     const add = (w, h, d, mat, x, y, z) => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
       m.position.set(x, y, z); g.add(m); return m;
@@ -117,17 +128,29 @@ export function createRender() {
     if (def.melee) {
       add(0.03, 0.05, 0.3, brass, 0, 0, -0.25); // curved brass blade
       add(0.05, 0.06, 0.12, wood, 0, 0, -0.05); // grip
+      add(0.06, 0.02, 0.04, brass, 0, 0.01, -0.11); // brass guard
     } else if (def.scoped) {
       add(0.07, 0.1, 0.85, steel, 0, 0, -0.35); // long barrel
       add(0.09, 0.12, 0.22, wood, 0, -0.02, 0.05); // stock
       add(0.06, 0.09, 0.16, brass, 0, 0.09, -0.2); // scope tube
       add(0.02, 0.05, 0.05, brass, 0, 0.05, -0.62); // muzzle
+      add(0.06, 0.13, 0.09, steel, 0, -0.11, -0.25); // magazine
+      add(0.04, 0.05, 0.05, steel, 0, 0.075, -0.08); // rear sight
+      add(0.03, 0.04, 0.03, brass, 0, 0.075, -0.72); // front sight
+      add(0.05, 0.06, 0.09, skin, 0, -0.1, -0.05); // firing hand on grip
     } else {
-      add(0.08, 0.12, 0.6, steel, 0, 0, -0.3); // receiver
-      add(0.05, 0.05, 0.3, steel, 0, 0.02, -0.65); // barrel
+      const short = def.name.includes('Kestrel');
+      const rl = short ? 0.42 : 0.6, bl = short ? 0.2 : 0.32;
+      add(0.08, 0.12, rl, steel, 0, 0, -0.28); // receiver
+      add(0.05, 0.05, bl, steel, 0, 0.02, -0.28 - rl / 2 - bl / 2 + 0.05); // barrel
+      add(0.06, 0.14, 0.09, steel, 0, -0.12, -0.22); // magazine
+      add(0.07, 0.11, 0.16, wood, 0, -0.02, 0.08); // stock
       add(0.07, 0.16, 0.12, wood, 0, -0.1, 0.02); // grip
+      add(0.05, 0.05, 0.06, steel, 0, 0.085, -0.05); // rear sight
+      add(0.03, 0.05, 0.03, brass, 0, 0.085, -0.28 - rl / 2 - 0.02); // front sight
       add(0.06, 0.04, 0.18, brass, 0, 0.09, -0.3); // brass rail
-      if (def.name.includes('Kestrel')) add(0.05, 0.05, 0.22, steel, 0, -0.06, -0.5); // foregrip
+      add(0.05, 0.06, 0.09, skin, 0, -0.1, -0.08); // firing hand on grip
+      if (short) add(0.05, 0.05, 0.22, steel, 0, -0.06, -0.45); // foregrip
     }
     g.visible = false;
     vmGroup.add(g);
@@ -137,7 +160,7 @@ export function createRender() {
   vmGroup.position.set(0.28, -0.26, -0.55);
 
   // ---- Pooled VFX: tracers, casings, sparks, decals, smoke ----
-  const muzzleLight = new THREE.PointLight(0xffc060, 0, 9, 1.6);
+  const muzzleLight = new THREE.PointLight(0xffc060, 0, 12, 1.6);
   camera.add(muzzleLight);
   muzzleLight.position.set(0.3, -0.2, -0.8);
   let muzzleUntil = 0;
@@ -171,7 +194,7 @@ export function createRender() {
     scene.add(mesh);
     return { mesh, items: Array.from({ length: count }, () => ({ life: 0, max: 1 })) };
   }
-  const tracers = makePool(24, new THREE.BoxGeometry(0.05, 0.05, 1),
+  const tracers = makePool(24, new THREE.BoxGeometry(0.07, 0.07, 1),
     new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.95 }));
   const casings = makePool(32, new THREE.BoxGeometry(0.02, 0.02, 0.05),
     new THREE.MeshStandardMaterial({ color: 0xd6ad60, metalness: 0.9, roughness: 0.3 }));
@@ -277,7 +300,7 @@ export function createRender() {
       smokeIdx = (smokeIdx + 1) % smoke.items.length;
     }
   }
-  function flashMuzzle(now) { muzzleLight.intensity = 26; muzzleUntil = now + 0.045; }
+  function flashMuzzle(now) { muzzleLight.intensity = 40; muzzleUntil = now + 0.045; }
 
   function hidePoolItem(pool, i) {
     _m1.makeScale(0, 0, 0);
@@ -300,13 +323,15 @@ export function createRender() {
       const g = bot.group;
       g.position.set(bot.body.position.x, bot.body.position.y, bot.body.position.z);
       if (!bot.alive) { g.rotation.set(-Math.PI / 2 * 0.9, bot.body.yaw, 0); continue; }
-      g.rotation.set(0, bot.body.yaw, 0);
+      const st = g.userData.stance || 0;
+      g.rotation.set(st === 1 ? 0.14 : 0, bot.body.yaw, st === 2 ? 0.16 : 0);
       const sp = Math.hypot(bot.body.velocity.x, bot.body.velocity.z);
       const wob = Math.sin(time * 9 + bot.id.length) * Math.min(0.5, sp * 0.12);
-      g.userData.legL.rotation.x = wob;
-      g.userData.legR.rotation.x = -wob;
-      g.userData.armR.rotation.x = -0.9;
-      g.position.y = bot.body.position.y + Math.abs(Math.sin(time * 9)) * 0.03 * Math.min(1, sp / 4);
+      g.userData.legL.rotation.x = st === 1 ? 0.55 : wob;
+      g.userData.legR.rotation.x = st === 1 ? -0.35 : -wob;
+      g.userData.armL.rotation.x = st === 2 ? -0.6 : -0.9;
+      g.userData.armR.rotation.x = st === 2 ? -0.7 : -1.1;
+      g.position.y = bot.body.position.y + (st === 1 ? -0.26 : 0) + Math.abs(Math.sin(time * 9)) * 0.03 * Math.min(1, sp / 4);
     }
     // VFX pools.
     updatePool(tracers, dt, (i, it) => {
